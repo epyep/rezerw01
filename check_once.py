@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import sys
+from datetime import date
 from pathlib import Path
  
 from playwright.async_api import async_playwright
@@ -94,8 +95,21 @@ async def get_available_dates(page, target: dict) -> set[str]:
             class_attr = (await day.get_attribute("class")) or ""
             is_available = target["unavailable_class"] not in class_attr
  
-        if is_available:
-            available.add(date_str)
+        if not is_available:
+            continue
+ 
+        # Ігноруємо дати, що вже минули — календар віддає для них
+        # data-avb з чисто історичним значенням, бронювання на них
+        # неможливе фізично
+        try:
+            day_date = date.fromisoformat(date_str)
+        except ValueError:
+            continue  # не змогли розпарсити — краще пропустити, ніж помилково зарахувати
+ 
+        if day_date < date.today():
+            continue
+ 
+        available.add(date_str)
  
     return available
  
