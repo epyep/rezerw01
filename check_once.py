@@ -16,7 +16,7 @@ import json
 import logging
 import os
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
  
 from playwright.async_api import async_playwright
@@ -48,6 +48,14 @@ TARGETS = [
 ]
  
 STATE_FILE = Path("state.json")
+ 
+# Захист від хибних "доступних" дат далеко в майбутньому (сайти на кшталт
+# Hotres.pl іноді віддають ненульовий data-avb навіть для місяців поза
+# реальним вікном бронювання). ~9 місяців вперед — з запасом покриває
+# заявлений на сайті період; онови число, якщо схроніско відкриє
+# бронювання на довший термін.
+MAX_MONTHS_AHEAD = 9
+MAX_DATE = date.today() + timedelta(days=MAX_MONTHS_AHEAD * 30)
  
  
 async def send_telegram_message(text: str) -> None:
@@ -106,7 +114,7 @@ async def get_available_dates(page, target: dict) -> set[str]:
         except ValueError:
             continue  # не змогли розпарсити — краще пропустити, ніж помилково зарахувати
  
-        if day_date < date.today():
+        if day_date < date.today() or day_date > MAX_DATE:
             continue
  
         available.add(date_str)
