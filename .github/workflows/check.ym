@@ -1,0 +1,45 @@
+name: Check hut availability
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hut-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install playwright httpx
+          playwright install --with-deps chromium
+
+      - name: Run check
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python check_once.py
+
+      - name: Commit updated state
+        run: |
+          git config user.name "hut-bot"
+          git config user.email "hut-bot@users.noreply.github.com"
+          git add state.json
+          git diff --quiet --cached || git commit -m "Update availability state [skip ci]"
+          git push
