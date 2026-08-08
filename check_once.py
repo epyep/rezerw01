@@ -132,12 +132,18 @@ async def main() -> None:
             new_dates = sorted(available_now - previous)
  
             if new_dates:
-                msg = (
-                    f"🏔 <b>{target['name']}</b>\n"
-                    f"З'явились нові вільні дати:\n"
-                    + "\n".join(f"• {d}" for d in new_dates)
-                    + f"\n\n{target['url']}"
-                )
+                MAX_DATES_IN_MESSAGE = 30
+                shown_dates = new_dates[:MAX_DATES_IN_MESSAGE]
+                extra_count = len(new_dates) - len(shown_dates)
+ 
+                lines = [f"🏔 <b>{target['name']}</b>", "З'явились нові вільні дати:"]
+                lines += [f"• {d}" for d in shown_dates]
+                if extra_count > 0:
+                    lines.append(f"…і ще {extra_count} дат")
+                lines.append("")
+                lines.append(target["url"])
+                msg = "\n".join(lines)
+ 
                 log.info("Знайдено нові дати для %s: %s", target["name"], new_dates)
                 await send_telegram_message(msg)
             else:
@@ -157,7 +163,4 @@ async def main() -> None:
  
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+ 
